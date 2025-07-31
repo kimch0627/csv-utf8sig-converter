@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CSV UTF-8-sig Converter</title>
+  <style>
+    body {
+      width: 600px;
+      min-height: 400px;
+      padding: 30px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 15px;
+      padding: 30px;
+      color: #333;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      margin: 0 0 8px 0;
+      color: #1a73e8;
+      font-weight: 600;
+    }
+    
+    .header p {
+      font-size: 14px;
+      color: #666;
+      margin: 0;
+    }
+    
+    .settings-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      background: #f8f9fa;
+    }
+    
+    .settings-section h3 {
+      margin: 0 0 20px 0;
+      font-size: 16px;
+      color: #333;
+      font-weight: 600;
+    }
+    
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .setting-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .setting-label {
+      font-size: 14px;
+      color: #333;
+      flex: 1;
+    }
+    
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 50px;
+      height: 28px;
+    }
+    
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 28px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: #1a73e8;
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+    
+    .manual-convert {
+      border-top: 1px solid #e0e0e0;
+      padding-top: 30px;
+    }
+    
+    .manual-convert h3 {
+      margin: 0 0 20px 0;
+      font-size: 16px;
+      color: #333;
+      font-weight: 600;
+    }
+    
+    .file-input-wrapper {
+      position: relative;
+      margin-bottom: 15px;
+    }
+    
+    .file-input {
+      width: 100%;
+      padding: 20px;
+      border: 3px dashed #ccc;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+      cursor: pointer;
+      transition: all 0.3s;
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: white;
+      box-sizing: border-box;
+    }
+    
+    .file-input:hover {
+      border-color: #1a73e8;
+      background-color: #f8f9ff;
+      transform: translateY(-2px);
+    }
+    
+    .file-input.dragover {
+      border-color: #1a73e8;
+      background-color: #f0f7ff;
+      transform: scale(1.02);
+    }
+    
+    .file-input.has-file {
+      border-color: #34a853;
+      background-color: #f0f8f0;
+    }
+    
+    .file-input.auto-selected {
+      background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+      border-color: #1976d2;
+      color: #1976d2;
+    }
+    
+    .file-input input[type="file"] {
+      position: absolute;
+      opacity: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    
+    .file-name {
+      font-weight: 600;
+      color: #34a853;
+      margin-top: 8px;
+      font-size: 15px;
+    }
+    
+    .auto-selected .file-name {
+      color: #1976d2;
+    }
+    
+    .convert-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #1a73e8 0%, #4285f4 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(26, 115, 232, 0.3);
+    }
+    
+    .convert-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(26, 115, 232, 0.4);
+    }
+    
+    .convert-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+    
+    .status {
+      margin-top: 15px;
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 14px;
+      text-align: center;
+      font-weight: 500;
+    }
+    
+    .status.success {
+      background-color: #e8f5e8;
+      color: #2e7d2e;
+      border: 1px solid #c3e6c3;
+    }
+    
+    .status.error {
+      background-color: #fce8e8;
+      color: #d32f2f;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .status.info {
+      background-color: #e3f2fd;
+      color: #1976d2;
+      border: 1px solid #bbdefb;
+    }
+    
+    .recent-info {
+      background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+      border: 2px solid #ffc107;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 25px;
+      font-size: 14px;
+      color: #856404;
+      position: relative;
+      box-shadow: 0 4px 15px rgba(255, 193, 7, 0.2);
+    }
+    
+    .recent-info strong {
+      color: #1a73e8;
+      font-size: 16px;
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    .recent-info .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      background: rgba(255,255,255,0.8);
+      border: none;
+      font-size: 18px;
+      color: #856404;
+      cursor: pointer;
+      width: 25px;
+      height: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.3s;
+    }
+    
+    .recent-info .close-btn:hover {
+      background: rgba(255,255,255,1);
+      transform: scale(1.1);
+    }
+    
+    .auto-select-label {
+      font-size: 12px;
+      color: #1976d2;
+      margin-bottom: 8px;
+      font-weight: 600;
+      text-align: center;
+    }
+    
+    .tab-note {
+      text-align: center;
+      margin-top: 20px;
+      padding: 15px;
+      background: rgba(26, 115, 232, 0.1);
+      border-radius: 8px;
+      font-size: 12px;
+      color: #1976d2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎉 CSV UTF-8-sig Converter</h1>
+      <p>Excel에서 한글이 정상 표시되도록 CSV 파일을 변환합니다</p>
+    </div>
+    
+    <div id="recentInfo" class="recent-info" style="display: none;">
+      <button class="close-btn" id="closeRecent">×</button>
+      <strong>🎉 CSV 파일이 다운로드되었습니다!</strong>
+      <span id="recentFilename"></span><br>
+      <small>아래에 자동으로 준비되었습니다. 클릭해서 선택하세요!</small>
+    </div>
+    
+    <div class="settings-section">
+      <h3>⚙️ 설정</h3>
+      <div class="setting-item">
+        <span class="setting-label">CSV 다운로드 완료 시 새 탭 자동 생성</span>
+        <label class="switch">
+          <input type="checkbox" id="autoNotify" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+      
+      <div class="setting-item">
+        <span class="setting-label">변환 완료 알림 표시</span>
+        <label class="switch">
+          <input type="checkbox" id="showNotifications" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+    
+    <div class="manual-convert">
+      <h3>📁 파일 변환</h3>
+      <div id="autoSelectLabel" class="auto-select-label" style="display: none;">
+        🔄 최근 다운로드 파일이 자동으로 준비되었습니다
+      </div>
+      <div class="file-input-wrapper">
+        <div class="file-input" id="fileInputArea">
+          <input type="file" id="fileInput" accept=".csv">
+          <div>📄 CSV 파일을 선택하거나 드래그하세요</div>
+          <div class="file-name" id="fileName" style="display: none;"></div>
+        </div>
+      </div>
+      <button id="convertBtn" class="convert-btn" disabled>✨ UTF-8-sig로 변환하기</button>
+      <div id="status" class="status" style="display: none;"></div>
+    </div>
+    
+    <div class="tab-note">
+      💡 CSV 파일 다운로드 완료 시 이 탭이 자동으로 생성됩니다. 설정에서 끌 수 있습니다.
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
