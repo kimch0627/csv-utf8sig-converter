@@ -1,4 +1,4 @@
-# 🎉 CSV UTF-8-sig Auto Converter
+# 🎉 CSV-utf8sig-Converter
 
 **Excel에서 한글이 깨지는 문제를 완전히 해결해주는 Chrome Extension**
 
