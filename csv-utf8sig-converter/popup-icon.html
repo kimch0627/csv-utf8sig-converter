@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>CSV UTF-8-sig Converter</title>
+  <style>
+    body {
+      width: 320px;
+      padding: 0;
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8f9fa;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+      text-align: center;
+    }
+    
+    .header h3 {
+      margin: 0 0 5px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    
+    .header p {
+      margin: 0;
+      font-size: 11px;
+      opacity: 0.9;
+    }
+    
+    .content {
+      padding: 15px;
+    }
+    
+    .status-card {
+      background: white;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 12px;
+      border: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .status-icon {
+      font-size: 20px;
+    }
+    
+    .status-info {
+      flex: 1;
+    }
+    
+    .status-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      margin: 0 0 2px 0;
+    }
+    
+    .status-desc {
+      font-size: 11px;
+      color: #666;
+      margin: 0;
+    }
+    
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .action-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    
+    .action-btn.primary {
+      background: #1a73e8;
+      color: white;
+    }
+    
+    .action-btn.primary:hover {
+      background: #1557b0;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+    }
+    
+    .action-btn.secondary {
+      background: white;
+      color: #333;
+      border: 1px solid #dadce0;
+    }
+    
+    .action-btn.secondary:hover {
+      background: #f8f9fa;
+      border-color: #1a73e8;
+      color: #1a73e8;
+    }
+    
+    .recent-file {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 12px;
+      font-size: 12px;
+      color: #856404;
+    }
+    
+    .recent-file strong {
+      display: block;
+      color: #664d03;
+      margin-bottom: 2px;
+    }
+    
+    .recent-file small {
+      font-size: 11px;
+    }
+    
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    
+    .settings-row:last-child {
+      border-bottom: none;
+    }
+    
+    .settings-label {
+      font-size: 12px;
+      color: #333;
+    }
+    
+    .mini-switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+    
+    .mini-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .mini-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .3s;
+      border-radius: 20px;
+    }
+    
+    .mini-slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .mini-slider {
+      background-color: #1a73e8;
+    }
+    
+    input:checked + .mini-slider:before {
+      transform: translateX(16px);
+    }
+    
+    .footer {
+      padding: 12px 15px;
+      background: #f0f0f0;
+      border-top: 1px solid #e0e0e0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #666;
+    }
+    
+    .footer a {
+      color: #1a73e8;
+      text-decoration: none;
+    }
+    
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    
+    .divider {
+      height: 1px;
+      background: #e0e0e0;
+      margin: 12px 0;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      font-size: 12px;
+    }
+    
+    .empty-state-icon {
+      font-size: 32px;
+      margin-bottom: 8px;
+      opacity: 0.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h3>🎉 CSV UTF-8-sig Converter</h3>
+    <p>Excel에서 한글이 정상 표시되도록 변환</p>
+  </div>
+  
+  <div class="content">
+    <!-- 최근 다운로드 파일 표시 (있을 경우) -->
+    <div id="recentFileInfo" class="recent-file" style="display: none;">
+      <strong>최근 다운로드:</strong>
+      <span id="recentFileName"></span>
+      <small id="recentTime"></small>
+    </div>
+    
+    <!-- 빠른 실행 버튼 -->
+    <div class="quick-actions">
+      <button id="openConverterBtn" class="action-btn primary">
+        <span>📄</span>
+        <span>변환기 열기</span>
+      </button>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <!-- 상태 정보 -->
+    <div class="status-card">
+      <div class="status-icon">✅</div>
+      <div class="status-info">
+        <p class="status-title">자동 감지 활성화</p>
+        <p class="status-desc">CSV 다운로드 시 자동으로 변환기가 열립니다</p>
+      </div>
+    </div>
+    
+    <!-- 간단한 설정 -->
+    <div class="settings-row">
+      <span class="settings-label">자동 탭 열기</span>
+      <label class="mini-switch">
+        <input type="checkbox" id="miniAutoNotify" checked>
+        <span class="mini-slider"></span>
+      </label>
+    </div>
+    
+    <div class="settings-row">
+      <span class="settings-label">변환 완료 알림</span>
+      <label class="mini-switch">
+        <input type="checkbox" id="miniShowNotifications">
+        <span class="mini-slider"></span>
+      </label>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <span>v<span id="versionInfo">1.0.0</span></span>
+    <a href="#" id="openSettingsLink">상세 설정</a>
+  </div>
+  
+  <script src="popup-icon.js"></script>
+</body>
+</html>

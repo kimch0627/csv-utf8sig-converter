@@ -9,16 +9,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('Badge clear failed:', error);
   }
   
+  // 버전 정보 표시
+  displayVersionInfo();
+  
   await loadSettings();
   await checkRecentDownload();
   setupEventListeners();
 });
 
-async function loadSettings() {
-  const settings = await chrome.storage.sync.get(['autoNotify', 'showNotifications']);
+function displayVersionInfo() {
+  const manifest = chrome.runtime.getManifest();
+  const versionElement = document.getElementById('version');
+  if (versionElement) {
+    versionElement.textContent = manifest.version;
+  }
   
-  document.getElementById('autoNotify').checked = settings.autoNotify !== false;
-  document.getElementById('showNotifications').checked = settings.showNotifications !== false;
+  // 작성자 정보도 manifest에서 가져오기 (있는 경우)
+  const authorElement = document.getElementById('author');
+  if (authorElement && manifest.author) {
+    // author가 문자열인 경우 이름만 추출
+    const authorName = manifest.author.split('<')[0].trim();
+    authorElement.textContent = authorName;
+  }
+}
+
+async function loadSettings() {
+  try {
+    const settings = await chrome.storage.sync.get([
+      'autoNotify', 'showNotifications', 'whitelistUrls', 'includeSubdomains'
+    ]);
+    
+    console.log('Loaded settings:', settings);
+    
+    document.getElementById('autoNotify').checked = settings.autoNotify !== false;
+    document.getElementById('showNotifications').checked = settings.showNotifications === true;
+    document.getElementById('includeSubdomains').checked = settings.includeSubdomains !== false;
+    
+    // 화이트리스트 URL 로드
+    if (settings.whitelistUrls && Array.isArray(settings.whitelistUrls) && settings.whitelistUrls.length > 0) {
+      document.getElementById('whitelistUrls').value = settings.whitelistUrls.join('\n');
+    } else {
+      // 비어있을 때 플레이스홀더 표시를 위해 빈 값 설정
+      document.getElementById('whitelistUrls').value = '';
+    }
+    
+    // 디버깅을 위한 저장소 상태 확인
+    chrome.storage.sync.getBytesInUse(null, (bytesInUse) => {
+      console.log(`Storage used: ${bytesInUse} bytes of ${chrome.storage.sync.QUOTA_BYTES} available`);
+    });
+  } catch (error) {
+    console.error('Settings load error:', error);
+    showStatus('⚠️ 설정을 불러오는 중 오류가 발생했습니다.', 'error');
+  }
 }
 
 async function checkRecentDownload() {
@@ -46,7 +88,6 @@ async function checkRecentDownload() {
 
 function simulateAutoFileSelection(filename) {
   const fileInputArea = document.getElementById('fileInputArea');
-  const convertBtn = document.getElementById('convertBtn');
   const autoSelectLabel = document.getElementById('autoSelectLabel');
   
   // UI를 자동 선택된 상태로 변경
@@ -61,8 +102,20 @@ function simulateAutoFileSelection(filename) {
   autoSelectLabel.style.display = 'block';
   isAutoSelected = true;
   
-  // 파일 input 이벤트 다시 바인딩
-  document.getElementById('fileInput').addEventListener('change', handleFileInputChange);
+  // 파일 입력 이벤트 리스너 재설정
+  setupFileInputEventListener();
+}
+
+function setupFileInputEventListener() {
+  const fileInput = document.getElementById('fileInput');
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        handleFileSelection(file);
+      }
+    });
+  }
 }
 
 function setupEventListeners() {
@@ -81,6 +134,66 @@ function setupEventListeners() {
     });
   });
   
+  // 서브도메인 포함 설정 변경
+  document.getElementById('includeSubdomains').addEventListener('change', async (e) => {
+    await chrome.runtime.sendMessage({
+      type: 'UPDATE_SETTINGS',
+      settings: { includeSubdomains: e.target.checked }
+    });
+  });
+  
+  // 화이트리스트 저장 버튼
+  document.getElementById('saveWhitelist').addEventListener('click', async () => {
+    const saveButton = document.getElementById('saveWhitelist');
+    const originalText = saveButton.textContent;
+    
+    try {
+      saveButton.disabled = true;
+      saveButton.textContent = '저장 중...';
+      
+      const rawText = document.getElementById('whitelistUrls').value;
+      const urls = rawText
+        .split('\n')
+        .map(line => {
+          const trimmedLine = line.trim();
+          if (!trimmedLine || trimmedLine.startsWith('#')) {
+            return null;
+          }
+          return trimmedLine.split('#')[0].trim();
+        })
+        .filter(url => url && url.length > 0);
+      
+      // 저장 전 현재 값 백업
+      const backup = await chrome.storage.sync.get(['whitelistUrls']);
+      
+      try {
+        await chrome.runtime.sendMessage({
+          type: 'UPDATE_SETTINGS',
+          settings: { whitelistUrls: urls }
+        });
+        
+        // 저장 확인을 위해 다시 읽어오기
+        const saved = await chrome.storage.sync.get(['whitelistUrls']);
+        if (JSON.stringify(saved.whitelistUrls) === JSON.stringify(urls)) {
+          showStatus('✅ 화이트리스트가 저장되었습니다.', 'success');
+          console.log('Whitelist saved successfully:', urls);
+        } else {
+          throw new Error('저장 확인 실패');
+        }
+      } catch (error) {
+        // 저장 실패 시 백업 복원
+        await chrome.storage.sync.set({ whitelistUrls: backup.whitelistUrls || [] });
+        throw error;
+      }
+    } catch (error) {
+      console.error('화이트리스트 저장 오류:', error);
+      showStatus('❌ 저장 중 오류가 발생했습니다. 다시 시도해주세요.', 'error');
+    } finally {
+      saveButton.disabled = false;
+      saveButton.textContent = originalText;
+    }
+  });
+  
   // 최근 다운로드 알림 닫기
   document.getElementById('closeRecent').addEventListener('click', async () => {
     await chrome.runtime.sendMessage({ type: 'CLEAR_RECENT_DOWNLOAD' });
@@ -88,34 +201,42 @@ function setupEventListeners() {
     resetFileSelection();
   });
   
-  // 파일 input 이벤트
-  document.getElementById('fileInput').addEventListener('change', handleFileInputChange);
-  
   // 변환 버튼
   document.getElementById('convertBtn').addEventListener('click', () => {
     if (currentFile) {
       convertFile(currentFile);
     } else if (isAutoSelected) {
-      showStatus('파일을 선택해주세요. 위의 파일 선택 영역을 클릭하세요.', 'error');
+      showStatus('파일을 선택해주세요. 파일 선택 영역을 클릭하세요.', 'error');
     } else {
       showStatus('파일을 선택해주세요.', 'error');
     }
   });
   
-  // 드래그 앤 드롭 이벤트
+  // 파일 입력 영역 클릭 이벤트
+  const fileInputArea = document.getElementById('fileInputArea');
+  fileInputArea.addEventListener('click', (e) => {
+    // input 요소를 클릭한 경우가 아니면 input을 트리거
+    if (e.target.tagName !== 'INPUT') {
+      const fileInput = document.getElementById('fileInput');
+      if (fileInput) {
+        fileInput.click();
+      }
+    }
+  });
+  
+  // 초기 파일 입력 이벤트 리스너 설정
+  setupFileInputEventListener();
+  
+  // 드래그 앤 드롭 이벤트 설정
   setupDragAndDrop();
-}
-
-function handleFileInputChange(e) {
-  const file = e.target.files[0];
-  handleFileSelection(file);
 }
 
 function handleFileSelection(file) {
   const fileInputArea = document.getElementById('fileInputArea');
-  const fileNameDiv = document.getElementById('fileName');
   const convertBtn = document.getElementById('convertBtn');
   const autoSelectLabel = document.getElementById('autoSelectLabel');
+  
+  console.log('Handling file selection:', file ? file.name : 'no file');
   
   if (!file) {
     resetFileSelection();
@@ -132,19 +253,22 @@ function handleFileSelection(file) {
   currentFile = file;
   isAutoSelected = false;
   
-  fileInputArea.classList.remove('auto-selected');
+  fileInputArea.classList.remove('auto-selected', 'dragover');
   fileInputArea.classList.add('has-file');
   fileInputArea.innerHTML = `
     <input type="file" id="fileInput" accept=".csv">
     <div>✅ 파일이 선택되었습니다</div>
     <div class="file-name">${file.name}</div>
+    <small>다른 파일로 바꾸려면 클릭하거나 드래그하세요</small>
   `;
   
   convertBtn.disabled = false;
   autoSelectLabel.style.display = 'none';
   
-  // 파일 input 이벤트 다시 바인딩
-  document.getElementById('fileInput').addEventListener('change', handleFileInputChange);
+  // 파일 입력 이벤트 리스너 재설정
+  setupFileInputEventListener();
+  
+  console.log('File selection completed:', file.name);
 }
 
 function resetFileSelection() {
@@ -155,57 +279,77 @@ function resetFileSelection() {
   currentFile = null;
   isAutoSelected = false;
   
-  fileInputArea.classList.remove('has-file', 'auto-selected');
+  fileInputArea.classList.remove('has-file', 'auto-selected', 'dragover');
   fileInputArea.innerHTML = `
     <input type="file" id="fileInput" accept=".csv">
-    <div>CSV 파일을 선택하거나 드래그하세요</div>
+    <div>📄 CSV 파일을 선택하거나 여기로 드래그하세요</div>
   `;
   
   convertBtn.disabled = true;
   autoSelectLabel.style.display = 'none';
   
-  // 파일 input 이벤트 다시 바인딩
-  document.getElementById('fileInput').addEventListener('change', handleFileInputChange);
+  // 파일 입력 이벤트 리스너 재설정
+  setupFileInputEventListener();
+  
+  console.log('File selection reset');
 }
 
 function setupDragAndDrop() {
   const fileInputArea = document.getElementById('fileInputArea');
   
-  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-    fileInputArea.addEventListener(eventName, preventDefaults, false);
-    document.body.addEventListener(eventName, preventDefaults, false);
-  });
+  console.log('Setting up drag and drop events');
   
-  function preventDefaults(e) {
+  // 파일 입력 영역에 대한 드래그 이벤트
+  fileInputArea.addEventListener('dragenter', (e) => {
     e.preventDefault();
     e.stopPropagation();
-  }
-  
-  ['dragenter', 'dragover'].forEach(eventName => {
-    fileInputArea.addEventListener(eventName, () => {
-      fileInputArea.classList.add('dragover');
-    }, false);
+    fileInputArea.classList.add('dragover');
   });
   
-  ['dragleave', 'drop'].forEach(eventName => {
-    fileInputArea.addEventListener(eventName, () => {
+  fileInputArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    fileInputArea.classList.add('dragover');
+  });
+  
+  fileInputArea.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // 마우스가 실제로 영역을 벗어났는지 확인
+    const rect = fileInputArea.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    if (x <= rect.left || x >= rect.right || y <= rect.top || y >= rect.bottom) {
       fileInputArea.classList.remove('dragover');
-    }, false);
+    }
   });
   
   fileInputArea.addEventListener('drop', (e) => {
-    const dt = e.dataTransfer;
-    const files = dt.files;
+    e.preventDefault();
+    e.stopPropagation();
+    
+    fileInputArea.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    console.log('Dropped files:', files.length);
     
     if (files.length > 0) {
       const file = files[0];
+      console.log('Processing file:', file.name, file.type);
       handleFileSelection(file);
-      
-      // file input에도 파일 설정
-      const fileInput = document.getElementById('fileInput');
-      fileInput.files = files;
     }
-  }, false);
+  });
+  
+  // 전체 문서에서 드래그 이벤트 방지 (브라우저 기본 동작 방지)
+  document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+  });
+  
+  document.addEventListener('drop', (e) => {
+    e.preventDefault();
+  });
 }
 
 async function convertFile(file) {
@@ -223,7 +367,9 @@ async function convertFile(file) {
     const encoding = checkFileEncoding(content);
     
     if (encoding === 'utf-8-sig') {
-      showStatus('이미 UTF-8-sig 형식입니다.', 'info');
+      showStatus('✅ 이미 UTF-8-sig 형식입니다!\n이 파일은 Excel에서 한글이 정상 표시됩니다.\n추가 변환이 필요하지 않습니다.', 'info');
+      convertBtn.disabled = false;
+      convertBtn.textContent = originalText;
       return;
     }
     
@@ -252,7 +398,12 @@ async function convertFile(file) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    showStatus(`✅ 변환 완료! (${encoding} → UTF-8-sig)`, 'success');
+    // 인코딩 변환 결과 메시지
+    const encodingMessage = encoding === 'utf-8' 
+      ? '✅ 변환 완료!\nUTF-8 → UTF-8 with BOM(sig)\n이제 Excel에서 한글이 정상적으로 표시됩니다.'
+      : '✅ 변환 완료!\n인코딩이 UTF-8 with BOM(sig)으로 변환되었습니다.\n이제 Excel에서 한글이 정상적으로 표시됩니다.';
+    
+    showStatus(encodingMessage, 'success');
     
     // 최근 다운로드 정보 제거
     await chrome.runtime.sendMessage({ type: 'CLEAR_RECENT_DOWNLOAD' });
@@ -260,13 +411,17 @@ async function convertFile(file) {
     
     // 변환 완료 알림
     const settings = await chrome.storage.sync.get(['showNotifications']);
-    if (settings.showNotifications !== false) {
-      chrome.notifications.create({
-        type: 'basic',
-        iconUrl: 'icons/icon48.png',
-        title: '변환 완료!',
-        message: `${newFileName}이 생성되었습니다.`
-      });
+    if (settings.showNotifications === true) {
+      try {
+        await chrome.notifications.create({
+          type: 'basic',
+          iconUrl: 'icons/icon48.png',
+          title: '변환 완료!',
+          message: `${newFileName}이 생성되었습니다.`
+        });
+      } catch (error) {
+        console.log('Notification failed:', error);
+      }
     }
     
   } catch (error) {
@@ -315,12 +470,14 @@ function checkFileEncoding(content) {
 
 function showStatus(message, type) {
   const statusDiv = document.getElementById('status');
-  statusDiv.textContent = message;
+  
+  // 줄바꿈 처리를 위해 HTML로 설정
+  statusDiv.innerHTML = message.replace(/\n/g, '<br>');
   statusDiv.className = `status ${type}`;
   statusDiv.style.display = 'block';
   
   // 성공 메시지는 더 오래 표시
-  const timeout = type === 'success' ? 5000 : 3000;
+  const timeout = type === 'success' ? 5000 : 4000;
   setTimeout(() => {
     if (statusDiv.style.display !== 'none') {
       statusDiv.style.display = 'none';

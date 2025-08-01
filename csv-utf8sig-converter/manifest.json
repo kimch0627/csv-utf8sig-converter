@@ -1,8 +1,10 @@
 {
   "manifest_version": 3,
   "name": "CSV UTF-8-sig Auto Converter",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "Detects CSV file downloads and helps convert them to UTF-8-sig encoding",
+  "author": "Fe <kimch0627@gmail.com>",
+  "homepage_url": "https://github.com/kimch0627/csv-utf8sig-converter",
   "permissions": [
     "downloads",
     "storage",
@@ -13,12 +15,12 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "popup-icon.html",
     "default_title": "CSV UTF-8-sig Converter"
   },
   "web_accessible_resources": [
     {
-      "resources": ["popup.html"],
+      "resources": ["popup.html", "popup-icon.html"],
       "matches": ["<all_urls>"]
     }
   ],

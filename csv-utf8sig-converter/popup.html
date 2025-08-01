@@ -4,8 +4,16 @@
   <meta charset="utf-8">
   <title>CSV UTF-8-sig Converter</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
+    
+    html {
+      overflow-x: hidden;
+    }
+    
     body {
-      width: 100vw;
+      width: 100%;
       min-height: 100vh;
       padding: 0;
       margin: 0;
@@ -15,10 +23,12 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      overflow-x: hidden;
     }
     
     .container {
-      width: 600px;
+      width: 100%;
+      max-width: 900px;
       background: rgba(255, 255, 255, 0.95);
       border-radius: 15px;
       padding: 30px;
@@ -26,6 +36,7 @@
       box-shadow: 0 20px 40px rgba(0,0,0,0.1);
       margin: 30px;
       box-sizing: border-box;
+      position: relative;
     }
     
     .header {
@@ -46,8 +57,21 @@
       margin: 0;
     }
     
+    .main-content {
+      display: flex;
+      gap: 30px;
+    }
+    
+    .left-panel {
+      flex: 1;
+    }
+    
+    .right-panel {
+      flex: 1;
+    }
+    
     .settings-section {
-      margin-bottom: 30px;
+      margin-bottom: 20px;
       padding: 20px;
       border: 1px solid #e0e0e0;
       border-radius: 12px;
@@ -55,7 +79,7 @@
     }
     
     .settings-section h3 {
-      margin: 0 0 20px 0;
+      margin: 0 0 15px 0;
       font-size: 16px;
       color: #333;
       font-weight: 600;
@@ -123,13 +147,100 @@
       transform: translateX(22px);
     }
     
+    .whitelist-section {
+      padding: 20px;
+      background: #f0f7ff;
+      border-radius: 12px;
+      border: 1px solid #bbdefb;
+    }
+    
+    .whitelist-section h3 {
+      margin: 0 0 15px 0;
+      font-size: 16px;
+      color: #333;
+      font-weight: 600;
+    }
+    
+    .subdomain-help {
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #e8f4fd;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #1976d2;
+      line-height: 1.4;
+    }
+    
+    .subdomain-help strong {
+      color: #1557b0;
+    }
+    
+    .subdomain-help code {
+      background: rgba(255,255,255,0.8);
+      padding: 1px 3px;
+      border-radius: 2px;
+      font-family: monospace;
+    }
+    
+    .whitelist-label {
+      display: block;
+      font-size: 13px;
+      color: #1976d2;
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
+    
+    .whitelist-textarea {
+      width: 100%;
+      height: 180px;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: monospace;
+      resize: vertical;
+      box-sizing: border-box;
+    }
+    
+    .save-whitelist-btn {
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: #1976d2;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    
+    .save-whitelist-btn:hover {
+      background: #1557b0;
+    }
+    
+    .whitelist-help {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #666;
+      line-height: 1.4;
+    }
+    
+    .whitelist-help code {
+      background: #f0f0f0;
+      padding: 1px 4px;
+      border-radius: 2px;
+      font-family: monospace;
+    }
+    
     .manual-convert {
-      border-top: 1px solid #e0e0e0;
-      padding-top: 30px;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      background: #fff;
     }
     
     .manual-convert h3 {
-      margin: 0 0 20px 0;
+      margin: 0 0 15px 0;
       font-size: 16px;
       color: #333;
       font-weight: 600;
@@ -150,7 +261,7 @@
       color: #666;
       cursor: pointer;
       transition: all 0.3s;
-      min-height: 80px;
+      min-height: 100px;
       display: flex;
       flex-direction: column;
       justify-content: center;
@@ -259,8 +370,8 @@
       background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
       border: 2px solid #ffc107;
       border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 25px;
+      padding: 15px;
+      margin-bottom: 20px;
       font-size: 14px;
       color: #856404;
       position: relative;
@@ -269,22 +380,22 @@
     
     .recent-info strong {
       color: #1a73e8;
-      font-size: 16px;
+      font-size: 15px;
       display: block;
       margin-bottom: 5px;
     }
     
     .recent-info .close-btn {
       position: absolute;
-      top: 15px;
-      right: 15px;
+      top: 10px;
+      right: 12px;
       background: rgba(255,255,255,0.8);
       border: none;
-      font-size: 18px;
+      font-size: 16px;
       color: #856404;
       cursor: pointer;
-      width: 25px;
-      height: 25px;
+      width: 22px;
+      height: 22px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -308,11 +419,40 @@
     .tab-note {
       text-align: center;
       margin-top: 20px;
-      padding: 15px;
+      padding: 12px;
       background: rgba(26, 115, 232, 0.1);
       border-radius: 8px;
       font-size: 12px;
       color: #1976d2;
+    }
+    
+    .footer-info {
+      text-align: center;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e0e0e0;
+      font-size: 12px;
+      color: #666;
+    }
+    
+    .footer-info a {
+      color: #1976d2;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    
+    .footer-info a:hover {
+      text-decoration: underline;
+    }
+    
+    .version-badge {
+      display: inline-block;
+      background: #e3f2fd;
+      color: #1976d2;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      margin: 0 4px;
     }
   </style>
 </head>
@@ -327,46 +467,91 @@
       <button class="close-btn" id="closeRecent">×</button>
       <strong>🎉 CSV 파일이 다운로드되었습니다!</strong>
       <span id="recentFilename"></span><br>
-      <small>아래에 자동으로 준비되었습니다. 클릭해서 선택하세요!</small>
+      <small>오른쪽에서 파일을 선택해 변환하세요!</small>
     </div>
     
-    <div class="settings-section">
-      <h3>⚙️ 설정</h3>
-      <div class="setting-item">
-        <span class="setting-label">CSV 다운로드 완료 시 새 탭 자동 생성</span>
-        <label class="switch">
-          <input type="checkbox" id="autoNotify" checked>
-          <span class="slider"></span>
-        </label>
-      </div>
-      
-      <div class="setting-item">
-        <span class="setting-label">변환 완료 알림 표시</span>
-        <label class="switch">
-          <input type="checkbox" id="showNotifications" checked>
-          <span class="slider"></span>
-        </label>
-      </div>
-    </div>
-    
-    <div class="manual-convert">
-      <h3>📁 파일 변환</h3>
-      <div id="autoSelectLabel" class="auto-select-label" style="display: none;">
-        🔄 최근 다운로드 파일이 자동으로 준비되었습니다
-      </div>
-      <div class="file-input-wrapper">
-        <div class="file-input" id="fileInputArea">
-          <input type="file" id="fileInput" accept=".csv">
-          <div>📄 CSV 파일을 선택하거나 드래그하세요</div>
-          <div class="file-name" id="fileName" style="display: none;"></div>
+    <div class="main-content">
+      <!-- 왼쪽: 화이트리스트 설정 -->
+      <div class="left-panel">
+        <div class="whitelist-section">
+          <h3>🌐 도메인 화이트리스트</h3>
+          
+          <div class="setting-item" style="margin-bottom: 12px;">
+            <span class="setting-label">서브도메인 자동 포함</span>
+            <label class="switch">
+              <input type="checkbox" id="includeSubdomains" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          
+          <div class="subdomain-help">
+            <strong>체크 시:</strong> <code>google.com</code> → <code>drive.google.com</code>, <code>mail.google.com</code> 등 포함<br>
+            <strong>해제 시:</strong> <code>google.com</code> → <code>google.com</code>만 정확히 매치
+          </div>
+          
+          <label class="whitelist-label">허용할 웹사이트 (비워두면 모든 사이트에서 동작):</label>
+          <textarea id="whitelistUrls" class="whitelist-textarea" placeholder="# 구글 관련 사이트&#10;google.com&#10;drive.google.com # 구글 드라이브&#10;&#10;# 국내 포털&#10;naver.com&#10;daum.net&#10;&#10;# 개발 관련&#10;github.com&#10;gitlab.com # 깃랩 서비스&#10;&#10;# IP 주소도 가능&#10;192.168.1.100 # 내부 서버"></textarea>
+          <button id="saveWhitelist" class="save-whitelist-btn">화이트리스트 저장</button>
+          <div class="whitelist-help">
+            💡 팁: <br>
+            • 비워두면 모든 웹사이트에서 동작합니다<br>
+            • <code>#</code>으로 시작하는 줄은 주석으로 무시됩니다<br>
+            • 한 줄에서 <code>#</code> 뒤는 주석으로 처리됩니다<br>
+            • IP 주소도 입력 가능합니다
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3>⚙️ 기본 설정</h3>
+          <div class="setting-item">
+            <span class="setting-label">CSV 다운로드 완료 시 새 탭 자동 생성</span>
+            <label class="switch">
+              <input type="checkbox" id="autoNotify" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+          
+          <div class="setting-item">
+            <span class="setting-label">변환 완료 알림 표시</span>
+            <label class="switch">
+              <input type="checkbox" id="showNotifications">
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
       </div>
-      <button id="convertBtn" class="convert-btn" disabled>✨ UTF-8-sig로 변환하기</button>
-      <div id="status" class="status" style="display: none;"></div>
+      
+      <!-- 오른쪽: 파일 변환 -->
+      <div class="right-panel">
+        <div class="manual-convert">
+          <h3>📁 파일 변환</h3>
+          <div id="autoSelectLabel" class="auto-select-label" style="display: none;">
+            🔄 최근 다운로드 파일이 자동으로 준비되었습니다
+          </div>
+          <div class="file-input-wrapper">
+            <div class="file-input" id="fileInputArea">
+              <input type="file" id="fileInput" accept=".csv">
+              <div>📄 CSV 파일을 선택하거나 여기로 드래그하세요</div>
+              <div class="file-name" id="fileName" style="display: none;"></div>
+            </div>
+          </div>
+          <button id="convertBtn" class="convert-btn" disabled>✨ UTF-8-sig로 변환하기</button>
+          <div id="status" class="status" style="display: none;"></div>
+        </div>
+      </div>
     </div>
     
     <div class="tab-note">
-      💡 CSV 파일 다운로드 완료 시 이 탭이 자동으로 생성됩니다. 설정에서 끌 수 있습니다.
+      💡 CSV 파일 다운로드 완료 시 이 탭이 자동으로 생성됩니다. 위 설정에서 끌 수 있습니다.
+    </div>
+    
+    <div class="footer-info">
+      <p>
+        <span class="version-badge">v<span id="version">1.0.0</span></span>
+        Created by <span id="author">개발자</span> | 
+        <a href="https://github.com/kimch0627/csv-utf8sig-converter" target="_blank">GitHub</a> | 
+        <a href="mailto:kimch0627@gmail.com">문의하기</a>
+      </p>
     </div>
   </div>
   
